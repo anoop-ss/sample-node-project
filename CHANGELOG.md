@@ -1,3 +1,16 @@
+# v1.0.0
+
+## 🔥 Highlights
+
+
+## ⚠️ Breaking Changes
+
+
+## 🐛 Bug Fixes
+
+
+## 📌 Other Changes
+
 # demo-1
 
 ## 🔥 Highlights
