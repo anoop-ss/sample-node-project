@@ -1,0 +1,45 @@
+name: Create Release on Milestone Close
+
+on:
+  milestone:
+    types:
+      - closed
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Milestone Details
+        id: milestone_info
+        run: |
+          MILESTONE="${{ github.event.milestone.title }}"
+          echo "MILESTONE=$MILESTONE" >> $GITHUB_ENV
+
+      - name: Extract Changelog for Milestone
+        id: extract_changelog
+        run: |
+          MILESTONE="# $MILESTONE"
+          CHANGELOG_CONTENT=$(awk -v milestone="$MILESTONE" '
+          BEGIN {print "## Changelog\n"}
+          $0 == milestone {found=1; next}
+          found && /^#/ {exit} 
+          found {print}
+          ' CHANGELOG.md)
+          
+          echo "$CHANGELOG_CONTENT" > changelog_excerpt.md
+          echo "CHANGELOG_CONTENT<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG_CONTENT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.MILESTONE }}
+          name: Release ${{ env.MILESTONE }}
+          body_path: changelog_excerpt.md
+          draft: false
+          prerelease: false
