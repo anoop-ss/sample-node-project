@@ -9,7 +9,9 @@ jobs:
     steps:
       - name: Find milestone from all open milestones
         id: find_milestone
-        env:
-          MILESTONE_NUMBER: ${{ secrets.MILESTONES_NUM }}
         run: |
-          echo "Milestone Number from Secrets: $MILESTONE_NUMBER"
+          API_URL="https://api.github.com/repos/${{ github.repository }}/issues?milestone=1"
+          echo "Fetching issues from: $API_URL"
+
+          ISSUES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
+          echo "Fetched issues: $ISSUES"
