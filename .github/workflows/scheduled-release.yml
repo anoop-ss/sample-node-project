@@ -12,5 +12,15 @@ jobs:
 
           ISSUES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
 
-          ISSUE_DATA=$(echo "$ISSUES" | jq -c '[.[] | {number: .number, timeline_url: .timeline_url, title: .title, body: .body, user: .user.login}]')
-          echo "$ISSUE_DATA"
+          ISSUE_DATA=$(echo "$ISSUES" | jq -c '[.[] | {number: .number, title: .title, body: .body, user: .user.login}]')
+
+          cho "ISSUE_LIST<<EOF" >> $GITHUB_ENV
+          echo "$ISSUE_DATA" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Use Saved Issue Data
+        env:
+          ISSUE_LIST: ${{ env.ISSUE_LIST }}
+        run: |
+          echo "Using stored issue list:"
+          echo "$ISSUE_LIST" | jq .
