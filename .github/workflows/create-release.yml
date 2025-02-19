@@ -39,6 +39,8 @@ jobs:
 
           sed -n "$((START_LINE+1)),$((END_LINE-1))p" CHANGELOG.md > changelog_excerpt.md
 
+          echo "$CHANGELOG_CONTENT"
+
           echo "CHANGELOG_CONTENT<<EOF" >> $GITHUB_ENV
           cat changelog_excerpt.md >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
