@@ -1,17 +1,15 @@
 name: Frequent Milestone Release
 
 on:
-  schedule:
-    - cron: "*/5 * * * *" # Runs every 5 minutes
   workflow_dispatch: # Allows manual execution
 
 jobs:
   get_pr_details:
     runs-on: ubuntu-latest
     steps:
-      - name: find milestone from all open milestones.
+      - name: Find milestone from all open milestones
         id: find_milestone
         env:
           MILESTONE_NUMBER: ${{ secrets.MILESTONES_NUM }}
-        run: /
-          echo secrets.MILESTONES_NUM
+        run: |
+          echo "Milestone Number from Secrets: $MILESTONE_NUMBER"
