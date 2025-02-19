@@ -23,16 +23,24 @@ jobs:
         id: extract_changelog
         run: |
           MILESTONE="# $MILESTONE"
-          CHANGELOG_CONTENT=$(awk -v milestone="$MILESTONE" '
-          BEGIN {print "## Changelog\n"}
-          $0 == milestone {found=1; next}
-          found && /^#/ {exit} 
-          found {print}
-          ' CHANGELOG.md)
-          
-          echo "$CHANGELOG_CONTENT" > changelog_excerpt.md
+          START_LINE=$(grep -n "^$MILESTONE" CHANGELOG.md | cut -d: -f1 | head -n1)
+
+          if [ -z "$START_LINE" ]; then
+            echo "Milestone not found in CHANGELOG.md"
+            exit 1
+          fi
+
+          END_LINE=$(tail -n +$((START_LINE+1)) CHANGELOG.md | grep -n "^#" | head -n1 | cut -d: -f1)
+          if [ -z "$END_LINE" ]; then
+            END_LINE=$(wc -l < CHANGELOG.md)
+          else
+            END_LINE=$((START_LINE + END_LINE - 1))
+          fi
+
+          sed -n "$((START_LINE+1)),$((END_LINE-1))p" CHANGELOG.md > changelog_excerpt.md
+
           echo "CHANGELOG_CONTENT<<EOF" >> $GITHUB_ENV
-          echo "$CHANGELOG_CONTENT" >> $GITHUB_ENV
+          cat changelog_excerpt.md >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Create GitHub Release
