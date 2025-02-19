@@ -7,14 +7,43 @@ jobs:
   get_pr_details:
     runs-on: ubuntu-latest
     steps:
-      - name: Find milestone from all open milestones
-        id: find_milestone
+      - name: Fetch issues linked to milestone
+        id: fetch_issues
         run: |
           API_URL="https://api.github.com/repos/${{ github.repository }}/issues?milestone=1&state=closed"
           echo "Fetching issues from: $API_URL"
 
           ISSUES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
-          echo "Fetched issues: $ISSUES"
 
-          ISSUE_DATA=$(echo "$ISSUES" | jq -r '.[] | {number: .number, timeline_url: .timeline_url, title: .title, body: .body, user: .user.login}')
-          echo "$ISSUE_DATA"
+          # Initialize an empty JSON array
+          ISSUE_LIST="[]"
+
+          # Iterate through each issue and extract required fields
+          echo "$ISSUES" | jq -c '.[]' | while read -r ISSUE; do
+            ISSUE_NUMBER=$(echo "$ISSUE" | jq -r '.number')
+            TIMELINE_URL=$(echo "$ISSUE" | jq -r '.timeline_url')
+            ISSUE_TITLE=$(echo "$ISSUE" | jq -r '.title')
+            ISSUE_BODY=$(echo "$ISSUE" | jq -r '.body')
+            ISSUE_USER=$(echo "$ISSUE" | jq -r '.user.login')
+
+            # Format issue data as JSON
+            ISSUE_JSON=$(jq -n \
+              --arg number "$ISSUE_NUMBER" \
+              --arg timeline_url "$TIMELINE_URL" \
+              --arg title "$ISSUE_TITLE" \
+              --arg body "$ISSUE_BODY" \
+              --arg user "$ISSUE_USER" \
+              '{number: $number, timeline_url: $timeline_url, title: $title, body: $body, user: $user}')
+
+            # Append to the list
+            ISSUE_LIST=$(echo "$ISSUE_LIST" | jq --argjson newIssue "$ISSUE_JSON" '. += [$newIssue]')
+          done
+
+          # Print formatted issue list
+          echo "Formatted Issue List:"
+          echo "$ISSUE_LIST" | jq .
+
+          # Save issue list to environment variable
+          echo "ISSUE_LIST<<EOF" >> $GITHUB_ENV
+          echo "$ISSUE_LIST" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
