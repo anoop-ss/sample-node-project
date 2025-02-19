@@ -8,5 +8,6 @@
 ## ⚠️ Breaking Changes
 
 ## 🐛 Bug Fixes
+- fixed res issue - by @anoop-ss
 
 ## 📌 Other Changes
