@@ -1,66 +1,66 @@
-# name: Frequent Milestone Release
+name: Frequent Milestone Release
 
-# on:
-#   schedule:
-#     - cron: "*/1 * * * *" # Runs every 1 minute
+on:
+  schedule:
+    - cron: "*/1 * * * *" # Runs every 1 minute
 
-# jobs:
-#   check_milestones:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
+jobs:
+  check_milestones:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-#       - name: Get milestone status
-#         id: check_milestone
-#         env:
-#           MILESTONES: ${{ secrets.MILESTONES }} # Comma-separated list of milestone names
-#         run: |
-#           IFS=',' read -r -a MILESTONE_LIST <<< "$MILESTONES"
+      - name: Get milestone status
+        id: check_milestone
+        env:
+          MILESTONES: ${{ secrets.MILESTONES }} # Comma-separated list of milestone names
+        run: |
+          IFS=',' read -r -a MILESTONE_LIST <<< "$MILESTONES"
           
-#           for MILESTONE in "${MILESTONE_LIST[@]}"; do
-#             MILESTONE_TITLE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-#               "https://api.github.com/repos/${{ github.repository }}/milestones" \
-#               | jq -r --arg MILESTONE "$MILESTONE" '.[] | select(.title == $MILESTONE and .open_issues == 0) | .title')
+          for MILESTONE in "${MILESTONE_LIST[@]}"; do
+            MILESTONE_TITLE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/milestones" \
+              | jq -r --arg MILESTONE "$MILESTONE" '.[] | select(.title == $MILESTONE and .open_issues == 0) | .title')
 
-#             if [[ -n "$MILESTONE_TITLE" ]]; then
-#               echo "Found completed milestone: $MILESTONE_TITLE"
-#               echo "milestone=$MILESTONE_TITLE" >> $GITHUB_ENV
-#               exit 0
-#             fi
-#           done
+            if [[ -n "$MILESTONE_TITLE" ]]; then
+              echo "Found completed milestone: $MILESTONE_TITLE"
+              echo "milestone=$MILESTONE_TITLE" >> $GITHUB_ENV
+              exit 0
+            fi
+          done
           
-#           echo "No completed milestone found"
-#           exit 1
+          echo "No completed milestone found"
+          exit 1
 
-#   create_release:
-#     needs: check_milestones
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
+  create_release:
+    needs: check_milestones
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-#       - name: Read version from properties.json
-#         id: get_version
-#         run: |
-#           VERSION=$(jq -r '.version' properties.json)
-#           if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
-#             echo "Version not found in properties.json"
-#             exit 1
-#           fi
-#           echo "version=v$VERSION" >> $GITHUB_ENV
+      - name: Read version from package.json
+        id: get_version
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
+            echo "Version not found in package.json"
+            exit 1
+          fi
+          echo "version=v$VERSION" >> $GITHUB_ENV
 
-#       - name: Create GitHub Release
-#         env:
-#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#         run: |
-#           curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-#             -H "Accept: application/vnd.github.v3+json" \
-#             https://api.github.com/repos/${{ github.repository }}/releases \
-#             -d '{
-#               "tag_name": "${{ env.version }}",
-#               "name": "${{ env.version }}",
-#               "body": "Release for milestone: ${{ env.milestone }}",
-#               "draft": false,
-#               "prerelease": false
-#             }'
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/releases \
+            -d '{
+              "tag_name": "${{ env.version }}",
+              "name": "${{ env.version }}",
+              "body": "Release for milestone: ${{ env.milestone }}",
+              "draft": false,
+              "prerelease": false
+            }'
