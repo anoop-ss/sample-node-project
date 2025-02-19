@@ -2,7 +2,6 @@ name: Frequent Milestone Release
 
 on:
   schedule:
-    - cron: "*/1 * * * *" # Runs every 5 minutes
   workflow_dispatch: # Allows manual execution
 
 jobs:
@@ -18,24 +17,49 @@ jobs:
           MILESTONES: ${{ secrets.MILESTONES }} # Comma-separated list of milestone names
         run: |
           IFS=',' read -r -a MILESTONE_LIST <<< "$MILESTONES"
-          
-          for MILESTONE in "${MILESTONE_LIST[@]}"; do
-            MILESTONE_TITLE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              "https://api.github.com/repos/${{ github.repository }}/milestones" \
-              | jq -r --arg MILESTONE "$MILESTONE" '.[] | select(.title == $MILESTONE and .open_issues == 0) | .title')
 
-            if [[ -n "$MILESTONE_TITLE" ]]; then
+          for MILESTONE in "${MILESTONE_LIST[@]}"; do
+            MILESTONE_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/milestones" \
+              | jq -r --arg MILESTONE "$MILESTONE" '.[] | select(.title == $MILESTONE and .open_issues == 0)')
+
+            MILESTONE_TITLE=$(echo "$MILESTONE_DATA" | jq -r '.title')
+            MILESTONE_DESC=$(echo "$MILESTONE_DATA" | jq -r '.description')
+            MILESTONE_NUMBER=$(echo "$MILESTONE_DATA" | jq -r '.number')
+
+            if [[ -n "$MILESTONE_TITLE" && "$MILESTONE_TITLE" != "null" ]]; then
               echo "Found completed milestone: $MILESTONE_TITLE"
               echo "milestone=$MILESTONE_TITLE" >> $GITHUB_ENV
+              echo "milestone_desc=$MILESTONE_DESC" >> $GITHUB_ENV
+              echo "milestone_number=$MILESTONE_NUMBER" >> $GITHUB_ENV
               exit 0
             fi
           done
-          
+
           echo "No completed milestone found"
           exit 1
 
-  create_release:
+  get_pr_details:
     needs: check_milestones
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch PR titles and authors
+        id: fetch_prs
+        run: |
+          PR_LIST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&milestone=${{ env.milestone_number }}" \
+            | jq -r '.[] | "- " + .title + " (@"+ .user.login +")"')
+
+          if [[ -z "$PR_LIST" ]]; then
+            PR_LIST="No PRs found."
+          fi
+
+          echo "pr_list<<EOF" >> $GITHUB_ENV
+          echo "$PR_LIST" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+  create_release:
+    needs: [check_milestones, get_pr_details]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -55,15 +79,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          RELEASE_BODY="${{ env.milestone_desc }}
+
+          ## Merged Pull Requests:
+          ${{ env.pr_list }}"
+
           curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/${{ github.repository }}/releases \
             -d '{
               "tag_name": "${{ env.version }}",
               "name": "${{ env.version }}",
-              "body": "Release for milestone: ${{ env.milestone }}",
+              "body": "'"${RELEASE_BODY//$'\n'/'\n'}"'",
               "draft": false,
               "prerelease": false
             }'
 
           echo "Release created successfully"
+
+  close_milestone:
+    needs: create_release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close the milestone
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -X PATCH -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/milestones/${{ env.milestone_number }} \
+            -d '{"state": "closed"}'
+          echo "Milestone closed successfully"
