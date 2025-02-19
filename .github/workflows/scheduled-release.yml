@@ -14,7 +14,7 @@ jobs:
         env:
           MILESTONE_NUMBER: ${{ secrets.MILESTONES_NUM }}
         run: |
-          API_URL="https://api.github.com/repos/${{ github.repository }}/issues?milestone=${{ env.MILESTONE_NUMBER }}&state=closed"
+          API_URL="https://api.github.com/repos/${{ github.repository }}/issues?milestone=1&state=closed"
           echo "Fetching issues from: $API_URL"
 
           ISSUES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
