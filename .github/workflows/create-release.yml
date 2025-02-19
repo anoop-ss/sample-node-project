@@ -36,7 +36,7 @@ jobs:
           echo "📌 Found milestone at line: $START_LINE"
 
           # Find the next milestone OR end of file
-          END_LINE=$(awk -v start="$START_LINE" 'NR>start && /^#/ {print NR; exit}' CHANGELOG.md)
+          END_LINE=$(grep -n "^#" CHANGELOG.md | awk -F: -v start="$START_LINE" '$1 > start {print $1; exit}')
           if [ -z "$END_LINE" ]; then
             END_LINE=$(wc -l < CHANGELOG.md)
           fi
