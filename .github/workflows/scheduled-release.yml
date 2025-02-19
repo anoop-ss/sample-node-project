@@ -48,7 +48,7 @@ jobs:
         id: fetch_prs
         run: |
           PR_LIST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&milestone=${{ env.milestone_number }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&milestone=${{ secrets.MILESTONES_NUM }}" \
             | jq -r '.[] | "* " + .title + " by @" + .user.login + " in " + .html_url')
 
           if [[ -z "$PR_LIST" ]]; then
@@ -56,7 +56,7 @@ jobs:
           fi
 
           NEW_CONTRIBUTORS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&milestone=${{ env.milestone_number }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&milestone=${{ secrets.MILESTONES_NUM }}" \
             | jq -r '[.[] | select(.author_association == "FIRST_TIMER")] | map("* @" + .user.login + " made their first contribution in " + .html_url) | join("\n")')
 
           if [[ -z "$NEW_CONTRIBUTORS" ]]; then
