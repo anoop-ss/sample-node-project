@@ -14,7 +14,7 @@ jobs:
 
           ISSUE_DATA=$(echo "$ISSUES" | jq -c '[.[] | {number: .number, title: .title, body: .body, user: .user.login}]')
 
-          cho "ISSUE_LIST<<EOF" >> $GITHUB_ENV
+          echo "ISSUE_LIST<<EOF" >> $GITHUB_ENV
           echo "$ISSUE_DATA" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
