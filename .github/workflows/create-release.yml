@@ -39,6 +39,8 @@ jobs:
 
           sed -n "$((START_LINE+1)),$((END_LINE-1))p" CHANGELOG.md > changelog_excerpt.md
 
+          cat changelog_excerpt.md
+
       - name: Print extracted changelog
         run: cat changelog_excerpt.md
 
