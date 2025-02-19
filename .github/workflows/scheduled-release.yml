@@ -19,46 +19,37 @@ jobs:
 
           ISSUES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
 
-          ISSUE_NUMBERS=$(echo "$ISSUES" | jq -r '.[] | select(.pull_request == null) | .number')
-          PR_NUMBERS=$(echo "$ISSUES" | jq -r '.[] | select(.pull_request != null) | .number')
+          # Extract PR links from issue data
+          PR_LINKS=$(echo "$ISSUES" | jq -r '.[] | select(.pull_request != null) | .pull_request.url')
 
-          if [[ -z "$ISSUE_NUMBERS" || "$ISSUE_NUMBERS" == "null" ]]; then
-            ISSUE_NUMBERS="No issues found."
+          if [[ -z "$PR_LINKS" || "$PR_LINKS" == "null" ]]; then
+            PR_LINKS="No PRs found."
           fi
 
-          if [[ -z "$PR_NUMBERS" || "$PR_NUMBERS" == "null" ]]; then
-            PR_NUMBERS="No PRs found."
-          fi
-
-          echo "ISSUE_NUMBERS<<EOF" >> $GITHUB_ENV
-          echo "$ISSUE_NUMBERS" >> $GITHUB_ENV
+          echo "PR_LINKS<<EOF" >> $GITHUB_ENV
+          echo "$PR_LINKS" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-          echo "PR_NUMBERS<<EOF" >> $GITHUB_ENV
-          echo "$PR_NUMBERS" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-      - name: Fetch PR details from linked issues
+      - name: Fetch PR details from issue PR links
         id: fetch_prs
         env:
-          PR_NUMBERS: ${{ env.PR_NUMBERS }}
+          PR_LINKS: ${{ env.PR_LINKS }}
         run: |
-          if [[ "$PR_NUMBERS" == "No PRs found." ]]; then
+          if [[ "$PR_LINKS" == "No PRs found." ]]; then
             echo "No PRs found linked to issues."
             exit 0
           fi
 
           PR_LIST=""
-          for PR_NUMBER in $PR_NUMBERS; do
-            API_URL="https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER"
-            echo "Fetching PR details from: $API_URL"
+          for PR_URL in $PR_LINKS; do
+            echo "Fetching PR details from: $PR_URL"
 
-            PR_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
+            PR_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$PR_URL")
             PR_TITLE=$(echo "$PR_DATA" | jq -r '.title')
             PR_AUTHOR=$(echo "$PR_DATA" | jq -r '.user.login')
-            PR_URL=$(echo "$PR_DATA" | jq -r '.html_url')
+            PR_HTML_URL=$(echo "$PR_DATA" | jq -r '.html_url')
 
-            PR_LIST+="* $PR_TITLE by @$PR_AUTHOR in $PR_URL"$'\n'
+            PR_LIST+="* $PR_TITLE by @$PR_AUTHOR in $PR_HTML_URL"$'\n'
           done
 
           echo "PR_LIST<<EOF" >> $GITHUB_ENV
@@ -91,9 +82,6 @@ jobs:
           RELEASE_BODY="$(cat <<EOF
           ## What's Changed
           ${{ env.PR_LIST }}
-
-          ## New Contributors
-          ${{ env.NEW_CONTRIBUTORS }}
 
           **Full Changelog**: ${REPO_URL}/commits/${{ env.version }}
           EOF
