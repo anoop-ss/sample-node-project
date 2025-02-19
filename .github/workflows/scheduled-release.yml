@@ -20,7 +20,7 @@ jobs:
           PR_LIST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL" \
             | jq -r '.[] | "* " + .title + " by @" + .user.login + " in " + .html_url')
 
-          if [[ -z "$PR_LIST" ]]; then
+          if [[ -z "$PR_LIST" || "$PR_LIST" == "null" ]]; then
             PR_LIST="No pull requests merged."
           fi
 
@@ -71,9 +71,6 @@ jobs:
         run: |
           REPO_URL="https://github.com/${{ github.repository }}"
           RELEASE_BODY="$(cat <<EOF
-          ## Merged Pull Requests:
-          ${{ env.PR_LIST }}
-
           ## What's Changed
           ${{ env.PR_LIST }}
 
