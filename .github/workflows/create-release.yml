@@ -22,33 +22,37 @@ jobs:
       - name: Extract Changelog for Milestone
         id: extract_changelog
         run: |
-          MILESTONE="# $MILESTONE"
-          START_LINE=$(grep -n "^$MILESTONE" CHANGELOG.md | cut -d: -f1 | head -n1)
+          MILESTONE="# ${{ env.MILESTONE }}"
+          echo "🔍 Searching for milestone: '$MILESTONE'"
 
-          if [ -z "$START_LINE" ]; then
-            echo "Milestone not found in CHANGELOG.md"
+          # Ensure the milestone exists in the file
+          if ! grep -q "^$MILESTONE" CHANGELOG.md; then
+            echo "❌ Milestone '$MILESTONE' not found in CHANGELOG.md"
             exit 1
           fi
 
-          END_LINE=$(tail -n +$((START_LINE+1)) CHANGELOG.md | grep -n "^#" | head -n1 | cut -d: -f1)
+          # Find the starting line of the milestone
+          START_LINE=$(grep -n "^$MILESTONE" CHANGELOG.md | cut -d: -f1 | head -n1)
+          echo "📌 Found milestone at line: $START_LINE"
+
+          # Find the next milestone OR end of file
+          END_LINE=$(awk -v start="$START_LINE" 'NR>start && /^#/ {print NR; exit}' CHANGELOG.md)
           if [ -z "$END_LINE" ]; then
             END_LINE=$(wc -l < CHANGELOG.md)
-          else
-            END_LINE=$((START_LINE + END_LINE - 1))
           fi
+          echo "📌 Extracting lines from $((START_LINE+1)) to $((END_LINE-1))"
 
+          # Extract the milestone section
           sed -n "$((START_LINE+1)),$((END_LINE-1))p" CHANGELOG.md > changelog_excerpt.md
 
+          echo "✅ Extracted Changelog:"
           cat changelog_excerpt.md
-
-      - name: Print extracted changelog
-        run: cat changelog_excerpt.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.MILESTONE }}
           name: Release ${{ env.MILESTONE }}
-          body_path: CHANGELOG.md
+          body_path: changelog_excerpt.md
           draft: false
           prerelease: false
