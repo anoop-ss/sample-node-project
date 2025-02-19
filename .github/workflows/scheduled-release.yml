@@ -12,7 +12,6 @@ jobs:
       - name: Fetch issues linked to milestone
         id: fetch_issues
         env:
-          PR_LINKS: ${{ env.PR_LINKS }}
           MILESTONE_NUMBER: ${{ secrets.MILESTONES_NUM }}
         run: |
           API_URL="https://api.github.com/repos/${{ github.repository }}/issues?milestone=${{ env.MILESTONE_NUMBER }}&state=closed"
@@ -23,9 +22,9 @@ jobs:
           echo "$ISSUES"
 
           # Extract PR links from issue data
-          env.PR_LINKS=$(echo "$ISSUES" | jq -r '.[] | select(.pull_request != null) | .pull_request.url')
+          PR_LINKS=$(echo "$ISSUES" | jq -r '.[] | select(.pull_request != null) | .pull_request.url')
 
-          echo "$env.PR_LINKS"
+          echo "PR_LINKS"
 
           if [[ -z "$PR_LINKS" || "$PR_LINKS" == "null" ]]; then
             env.PR_LINKS="No PRs found."
