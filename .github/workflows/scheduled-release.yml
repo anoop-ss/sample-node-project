@@ -16,5 +16,5 @@ jobs:
           ISSUES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
           echo "Fetched issues: $ISSUES"
 
-          ISSUE_DATA=$(echo "$ISSUES" | jq -r '.[] | {number: .number, timeline_url: .timeline_url, title: .title, body: .body}')
+          ISSUE_DATA=$(echo "$ISSUES" | jq -r '.[] | {number: .number, timeline_url: .timeline_url, title: .title, body: .body, user: .user.login}')
           echo "$ISSUE_DATA"
