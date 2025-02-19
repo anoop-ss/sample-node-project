@@ -64,3 +64,5 @@ jobs:
               "draft": false,
               "prerelease": false
             }'
+
+          echo "Release created successfully"
