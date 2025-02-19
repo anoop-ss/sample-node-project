@@ -39,11 +39,8 @@ jobs:
 
           sed -n "$((START_LINE+1)),$((END_LINE-1))p" CHANGELOG.md > changelog_excerpt.md
 
-          echo "content: $CHANGELOG_CONTENT"
-
-          echo "CHANGELOG_CONTENT<<EOF" >> $GITHUB_ENV
-          cat changelog_excerpt.md >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+      - name: Print extracted changelog
+        run: cat changelog_excerpt.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
