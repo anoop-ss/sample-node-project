@@ -2,7 +2,8 @@ name: Frequent Milestone Release
 
 on:
   schedule:
-    - cron: "*/1 * * * *" # Runs every 1 minute
+    - cron: "*/1 * * * *" # Runs every 5 minutes
+  workflow_dispatch: # Allows manual execution
 
 jobs:
   check_milestones:
