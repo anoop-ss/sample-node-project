@@ -1,6 +1,7 @@
 # v1.0.0
 
 ## 🔥 Highlights
+- relesase neww feature - by @anoop-ss
 
 
 ## ⚠️ Breaking Changes
