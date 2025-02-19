@@ -1,6 +1,7 @@
 # demo-1
 
 ## 🔥 Highlights
+- demo-featre tscaase update - by @anoop-ss
 - formated the test for new API - by @anoop-ss
 - update - by @anoop-ss
 
