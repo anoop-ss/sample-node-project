@@ -40,12 +40,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Read version from properties.json
+      - name: Read version from package.json
         id: get_version
         run: |
-          VERSION=$(jq -r '.version' properties.json)
+          VERSION=$(jq -r '.version' package.json)
           if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
-            echo "Version not found in properties.json"
+            echo "Version not found in package.json"
             exit 1
           fi
           echo "version=v$VERSION" >> $GITHUB_ENV
