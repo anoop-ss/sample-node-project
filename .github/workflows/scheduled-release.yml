@@ -2,6 +2,7 @@ name: Frequent Milestone Release
 
 on:
   schedule:
+    - cron: "*/5 * * * *" # Runs every 5 minutes
   workflow_dispatch: # Allows manual execution
 
 jobs:
@@ -43,19 +44,31 @@ jobs:
     needs: check_milestones
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch PR titles and authors
+      - name: Fetch PR titles, authors & links
         id: fetch_prs
         run: |
           PR_LIST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&milestone=${{ env.milestone_number }}" \
-            | jq -r '.[] | "- " + .title + " (@"+ .user.login +")"')
+            | jq -r '.[] | "* " + .title + " by @" + .user.login + " in " + .html_url')
 
           if [[ -z "$PR_LIST" ]]; then
-            PR_LIST="No PRs found."
+            PR_LIST="No pull requests merged."
+          fi
+
+          NEW_CONTRIBUTORS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&milestone=${{ env.milestone_number }}" \
+            | jq -r '[.[] | select(.author_association == "FIRST_TIMER")] | map("* @" + .user.login + " made their first contribution in " + .html_url) | join("\n")')
+
+          if [[ -z "$NEW_CONTRIBUTORS" ]]; then
+            NEW_CONTRIBUTORS="No new contributors."
           fi
 
           echo "pr_list<<EOF" >> $GITHUB_ENV
           echo "$PR_LIST" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          echo "new_contributors<<EOF" >> $GITHUB_ENV
+          echo "$NEW_CONTRIBUTORS" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
   create_release:
@@ -79,10 +92,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          REPO_URL="https://github.com/${{ github.repository }}"
           RELEASE_BODY="${{ env.milestone_desc }}
 
           ## Merged Pull Requests:
-          ${{ env.pr_list }}"
+          ${{ env.pr_list }}
+
+          ## What's Changed
+          ${{ env.pr_list }}
+
+          ## New Contributors
+          ${{ env.new_contributors }}
+
+          **Full Changelog**: ${REPO_URL}/commits/${{ env.version }}"
 
           curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
