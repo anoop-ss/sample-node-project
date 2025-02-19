@@ -12,6 +12,7 @@ jobs:
       - name: Fetch issues linked to milestone
         id: fetch_issues
         env:
+          PR_LINKS: ${{ env.PR_LINKS }}
           MILESTONE_NUMBER: ${{ secrets.MILESTONES_NUM }}
         run: |
           API_URL="https://api.github.com/repos/${{ github.repository }}/issues?milestone=${{ env.MILESTONE_NUMBER }}&state=closed"
@@ -19,11 +20,15 @@ jobs:
 
           ISSUES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
 
+          echo "$ISSUES"
+
           # Extract PR links from issue data
-          PR_LINKS=$(echo "$ISSUES" | jq -r '.[] | select(.pull_request != null) | .pull_request.url')
+          env.PR_LINKS=$(echo "$ISSUES" | jq -r '.[] | select(.pull_request != null) | .pull_request.url')
+
+          echo "$env.PR_LINKS"
 
           if [[ -z "$PR_LINKS" || "$PR_LINKS" == "null" ]]; then
-            PR_LINKS="No PRs found."
+            env.PR_LINKS="No PRs found."
           fi
 
           echo "PR_LINKS<<EOF" >> $GITHUB_ENV
@@ -56,68 +61,68 @@ jobs:
           echo "$PR_LIST" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-  create_release:
-    needs: get_pr_details
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  # create_release:
+  #   needs: get_pr_details
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Read version from package.json
-        id: get_version
-        run: |
-          VERSION=$(jq -r '.version' package.json)
-          if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
-            echo "Version not found in package.json"
-            exit 1
-          fi
-          echo "version=v$VERSION" >> $GITHUB_ENV
+  #     - name: Read version from package.json
+  #       id: get_version
+  #       run: |
+  #         VERSION=$(jq -r '.version' package.json)
+  #         if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
+  #           echo "Version not found in package.json"
+  #           exit 1
+  #         fi
+  #         echo "version=v$VERSION" >> $GITHUB_ENV
 
-      - name: Create GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MILESTONE_NUMBER: ${{ secrets.MILESTONES_NUM }}
-        run: |
-          REPO_URL="https://github.com/${{ github.repository }}"
-          RELEASE_BODY="$(cat <<EOF
-          ## What's Changed
-          ${{ env.PR_LIST }}
+  #     - name: Create GitHub Release
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         MILESTONE_NUMBER: ${{ secrets.MILESTONES_NUM }}
+  #       run: |
+  #         REPO_URL="https://github.com/${{ github.repository }}"
+  #         RELEASE_BODY="$(cat <<EOF
+  #         ## What's Changed
+  #         ${{ env.PR_LIST }}
 
-          **Full Changelog**: ${REPO_URL}/commits/${{ env.version }}
-          EOF
-          )"
+  #         **Full Changelog**: ${REPO_URL}/commits/${{ env.version }}
+  #         EOF
+  #         )"
 
-          API_URL="https://api.github.com/repos/${{ github.repository }}/releases"
-          echo "Creating release via API: $API_URL"
+  #         API_URL="https://api.github.com/repos/${{ github.repository }}/releases"
+  #         echo "Creating release via API: $API_URL"
 
-          curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "$API_URL" \
-            -d '{
-              "tag_name": "${{ env.version }}",
-              "name": "${{ env.version }}",
-              "body": "'"${RELEASE_BODY//$'\n'/'\n'}"'",
-              "draft": false,
-              "prerelease": false
-            }'
+  #         curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+  #           -H "Accept: application/vnd.github.v3+json" \
+  #           "$API_URL" \
+  #           -d '{
+  #             "tag_name": "${{ env.version }}",
+  #             "name": "${{ env.version }}",
+  #             "body": "'"${RELEASE_BODY//$'\n'/'\n'}"'",
+  #             "draft": false,
+  #             "prerelease": false
+  #           }'
 
-          echo "Release created successfully"
+  #         echo "Release created successfully"
 
-  close_milestone:
-    needs: create_release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Close the milestone
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MILESTONE_NUMBER: ${{ secrets.MILESTONES_NUM }}
-        run: |
-          API_URL="https://api.github.com/repos/${{ github.repository }}/milestones/${{ env.MILESTONE_NUMBER }}"
-          echo "Closing milestone using API: $API_URL"
+  # close_milestone:
+  #   needs: create_release
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Close the milestone
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         MILESTONE_NUMBER: ${{ secrets.MILESTONES_NUM }}
+  #       run: |
+  #         API_URL="https://api.github.com/repos/${{ github.repository }}/milestones/${{ env.MILESTONE_NUMBER }}"
+  #         echo "Closing milestone using API: $API_URL"
 
-          curl -X PATCH -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "$API_URL" \
-            -d '{"state": "closed"}'
+  #         curl -X PATCH -H "Authorization: token $GITHUB_TOKEN" \
+  #           -H "Accept: application/vnd.github.v3+json" \
+  #           "$API_URL" \
+  #           -d '{"state": "closed"}'
           
-          echo "Milestone closed successfully"
+  #         # echo "Milestone closed successfully"
