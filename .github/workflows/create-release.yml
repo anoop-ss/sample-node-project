@@ -47,6 +47,6 @@ jobs:
         with:
           tag_name: ${{ env.MILESTONE }}
           name: Release ${{ env.MILESTONE }}
-          body_path: changelog_excerpt.md
+          body_path: CHANGELOG.md
           draft: false
           prerelease: false
